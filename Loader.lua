@@ -47,7 +47,7 @@ end)
 local function safeLoad(moduleName, githubPath)
     local success, result = pcall(function()
         -- Thử load từ GitHub trước
-        local url = "https://raw.githubusercontent.com/longgamer998-code/long/main/" .. githubPath
+        local url = "https://raw.githubusercontent.com/longgamer998-code/long/refs/heads/main/" .. githubPath
         return loadstring(game:HttpGet(url))()
     end)
     
