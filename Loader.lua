@@ -43,15 +43,44 @@ spawn(function()
     end
 end)
 
+-- Hàm load module an toàn với fallback
+local function safeLoad(moduleName, githubPath)
+    local success, result = pcall(function()
+        -- Thử load từ GitHub trước
+        local url = "https://raw.githubusercontent.com/longgamer998-code/long/main/" .. githubPath
+        return loadstring(game:HttpGet(url))()
+    end)
+    
+    if success and result then
+        print("✓ Đã tải " .. moduleName .. " từ GitHub")
+        return result
+    else
+        -- Fallback: thử require từ local
+        warn("⚠ Không thể tải " .. moduleName .. " từ GitHub, đang thử load local...")
+        success, result = pcall(function()
+            local modulePath = string.gsub(githubPath, "%.lua$", "")
+            modulePath = string.gsub(modulePath, "/", ".")
+            return require(script:WaitForChild(modulePath))
+        end)
+        
+        if success and result then
+            print("✓ Đã tải " .. moduleName .. " từ local")
+            return result
+        else
+            error("❌ Không thể tải module: " .. moduleName)
+        end
+    end
+end
+
 -- Load Core Modules
-local FarmCore = require(script.Core.FarmCore)
-local Teleport = require(script.Core.Teleport)
-local Quest = require(script.Core.Quest)
+local FarmCore = safeLoad("FarmCore", "FarmCore.lua")
+local Teleport = safeLoad("Teleport", "Teleport.lua")
+local Quest = safeLoad("Quest", "Quest.lua")
 
 -- Load Config Modules
-local Worlds = require(script.Config.Worlds)
-local Monsters = require(script.Config.Monsters)
-local Bosses = require(script.Config.Bosses)
+local Worlds = safeLoad("Worlds", "Worlds.lua")
+local Monsters = safeLoad("Monsters", "Monsters.lua")
+local Bosses = safeLoad("Bosses", "Bosses.lua")
 
 -- Global Settings
 _G.Color = Color3.fromRGB(68, 202, 186)
@@ -83,10 +112,24 @@ elseif placeId == 7449423635 then
     _G.Three_World = true
 end
 
--- Initialize systems
-FarmCore:Init()
-Teleport:Init()
-Quest:Init()
+-- Initialize systems (với kiểm tra nil)
+if FarmCore and FarmCore.Init then
+    FarmCore:Init()
+else
+    warn("⚠ FarmCore không có phương thức Init")
+end
+
+if Teleport and Teleport.Init then
+    Teleport:Init()
+else
+    warn("⚠ Teleport không có phương thức Init")
+end
+
+if Quest and Quest.Init then
+    Quest:Init()
+else
+    warn("⚠ Quest không có phương thức Init")
+end
 
 -- Rejoin system
 spawn(function()
@@ -102,11 +145,25 @@ spawn(function()
     end
 end)
 
--- Load UI
-local success, errorMsg = pcall(function()
-    require(script.UI.MainUI)
-end)
+-- Load UI với fallback
+local function loadUI()
+    local success, result = pcall(function()
+        return loadstring(game:HttpGet("https://raw.githubusercontent.com/longgamer998-code/long/main/MainUI.lua"))()
+    end)
+    
+    if not success then
+        warn("⚠ Không thể tải UI từ GitHub, đang thử load local...")
+        success, result = pcall(function()
+            return require(script.UI.MainUI)
+        end)
+    end
+    
+    if not success then
+        error("❌ Không thể tải UI Module")
+    end
+end
 
+local success, errorMsg = pcall(loadUI)
 if not success then
     warn("UI Load Error:", errorMsg)
 end
